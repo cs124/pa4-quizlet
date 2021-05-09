@@ -273,6 +273,7 @@ class Part5_Runner():
             top_k = self.get_top_k_similar(ent1, self.entity_2_representation[ent1],
                                     {k:v for k,v in self.entity_2_representation.items()
                                     if k != ent1}, 5)
+            assert len(top_k) == 5
             top_k_acc.append(ent2 in top_k)
             if verbose:
                 print("Entity:", ent1)
@@ -280,6 +281,7 @@ class Part5_Runner():
             top_k = self.get_top_k_similar(ent2, self.entity_2_representation[ent2],
                                     {k:v for k,v in self.entity_2_representation.items()
                                     if k != ent2}, 5)
+            assert len(top_k) == 5
             top_k_acc.append(ent1 in top_k)
         print("Top 5 Accuracy:", np.mean(top_k_acc))
 
