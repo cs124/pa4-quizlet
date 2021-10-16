@@ -270,7 +270,7 @@ class Part5_Runner():
             label = float(label)
             if label < 75:
                 continue
-            top_k = self.get_top_k_similar(ent1, self.entity_2_representation[ent1],
+            top_k = self.get_top_k_similar(self.entity_2_representation[ent1],
                                     {k:v for k,v in self.entity_2_representation.items()
                                     if k != ent1}, 5)
             assert len(top_k) == 5
@@ -278,7 +278,7 @@ class Part5_Runner():
             if verbose:
                 print("Entity:", ent1)
                 print("Similar entities:", top_k)
-            top_k = self.get_top_k_similar(ent2, self.entity_2_representation[ent2],
+            top_k = self.get_top_k_similar(self.entity_2_representation[ent2],
                                     {k:v for k,v in self.entity_2_representation.items()
                                     if k != ent2}, 5)
             assert len(top_k) == 5
