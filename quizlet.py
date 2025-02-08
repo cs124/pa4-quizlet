@@ -1,6 +1,7 @@
 """
 CS124 PA5: Quizlet // Stanford, Winter 2020
 by @lcruzalb, with assistance from @jchen437
+parts 3, 4 are new in 2025 by @gdmagana
 """
 import csv
 import sys
@@ -13,9 +14,7 @@ from collections import defaultdict
 import numpy as np
 from gensim.scripts.glove2word2vec import glove2word2vec
 from gensim.models.keyedvectors import KeyedVectors
-import nltk
-from nltk.tokenize import word_tokenize
-import spacy
+import json
 
 #############################################################################
 ###                    CS124 Homework 5: Quizlet!                         ###
@@ -76,107 +75,11 @@ class Part1_Runner():
         acc = n_correct / len(synonym_qs)
         return acc
 
+
 class Part2_Runner():
-    def __init__(self, find_analogy_word):        
-        self.find_analogy_word = find_analogy_word
-
-        # load embeddings
-        self.embeddings = KeyedVectors.load_word2vec_format("data/embeddings/glove50_4k.txt", binary=False)
-
-        # load questions
-        root_dir = 'data/dev/'
-        self.analogy_qs = load_analogy_qs(root_dir + 'analogies.csv')
-
-    def evaluate(self, print_q=False):
-        '''
-        Calculates accuracy on part 2.
-        '''
-        print ('Part 2: Analogies!')
-        print ('------------------')
-
-        n_correct = 0
-        for i, (tup, choices) in enumerate(self.analogy_qs):
-            a, b, aa, true_bb = tup
-            ans = self.find_analogy_word(a, b, aa, choices, self.embeddings)
-            if ans == true_bb: n_correct += 1
-
-            if print_q:
-                print ('%d. %s is to %s as %s is to ___?' % (i+1, a, b, aa))
-                print ('    a) %s\n    b) %s\n    c) %s\n    d) %s' % tuple(choices))
-                print ('You answered: %s\n' % ans)
-
-        acc = n_correct / len(self.analogy_qs)
-        print ('accuracy: %.5f' % acc)
-        print (' ')
-        return acc
-
-class Part3_Runner():
-    def __init__(self, get_similarity):        
-        self.get_similarity = get_similarity
-
-        # load embeddings
-        self.embeddings = KeyedVectors.load_word2vec_format("data/embeddings/glove50_4k.txt", binary=False)
-
-        # load questions
-        root_dir = 'data/dev/'
-        self.sentence_sim_qs = load_sentence_sim_qs(root_dir + 'sentences.csv')
-
-    def evaluate(self, print_q=False):
-        '''
-        Calculates accuracy of part 3.
-        '''
-        print ('Part 3: Sentence similarity!')
-        print ('----------------------------')
-
-        acc_base = self.get_sentence_sim_accuracy(self.embeddings, self.sentence_sim_qs, use_POS=False, print_q=print_q)
-        acc_POS = self.get_sentence_sim_accuracy(self.embeddings, self.sentence_sim_qs, use_POS=True, print_q=print_q)
-
-        print ('accuracy (regular): %.5f' % acc_base)
-        print ('accuracy with POS weighting: %.5f' % acc_POS)
-        print (' ')
-        return acc_base, acc_POS
-
-    def get_sentence_sim_accuracy(self, embeddings, sentence_sim_qs, use_POS, print_q=False):
-        '''
-        Helper function to compute sentence similarity classification accuracy.
-        '''
-        THRESHOLD = 0.95
-        POS_weights = self.load_pos_weights_map() if use_POS else None
-
-        if print_q:
-            type_str = 'with POS weighting' if use_POS else 'regular'
-            print ('Answering part 3 (%s)...' % type_str)
-
-        n_correct = 0
-        for i, (label, s1, s2) in enumerate(sentence_sim_qs):
-            sim = self.get_similarity(s1, s2, embeddings, use_POS, POS_weights)
-            pred = 1 if sim > THRESHOLD else 0
-            if pred == label: n_correct += 1
-
-            if print_q:
-                print ('%d. True/False: the following two sentences are semantically similar:' % (i+1))
-                print ('     1. %s' % s1)
-                print ('     2. %s' % s2)
-                print ('You answered: %r\n' % (True if pred == 1 else False))
-
-        acc = n_correct / len(sentence_sim_qs)
-        return acc
-
-    def load_pos_weights_map(self):
-        '''
-        Helper that loads the POS tag weights for part 3
-        '''
-        d = {}
-        with open("data/pos_weights.txt") as f:
-            for line in f:
-                pos, weight = line.split()
-                d[pos] = float(weight)
-        return d
-
-class Part4_Runner():
-    def __init__(self, occupation_exploration, part4_written):        
+    def __init__(self, occupation_exploration, part2_written):        
         self.occupation_exploration = occupation_exploration
-        self.part4_written = part4_written
+        self.part2_written = part2_written
 
         # load embeddings
         self.embeddings = KeyedVectors.load_word2vec_format("data/embeddings/glove50_4k.txt", binary=False)
@@ -184,9 +87,9 @@ class Part4_Runner():
 
     def evaluate(self):
         '''
-        Runs part 4 functions
+        Runs part 2 functions
         '''
-        print ('Part 4: Exploration!')
+        print ('Part 2: Exploration!')
         print ('--------------------')
 
         occupations = load_occupations_list()
@@ -200,101 +103,80 @@ class Part4_Runner():
             print (' %d. %s' % (i+1, occ))
 
         # sanity check they answered written - this is just a heuristic
-        written_ans = self.part4_written()
+        written_ans = self.part2_written()
         if 'TODO' in written_ans:
-            print ('Part 4 written answer contains TODO, did you answer it?')
+            print ('Part 2 written answer contains TODO, did you answer it?')
         print (' ')
         return top_man_occs, top_woman_occs
 
-class Part5_Runner():
-    def __init__(self, extract_named_entities, compute_entity_representation,
-                    compute_entity_similarity, get_top_k_similar): 
-        self.extract_named_entities = extract_named_entities
-        self.compute_entity_representation = compute_entity_representation
-        self.compute_entity_similarity = compute_entity_similarity
-        self.get_top_k_similar = get_top_k_similar
+class Part3_Runner():
+    """
+    This is now the new part 3, which is contextual embeddings with BERT.
+    """
+    def __init__(self, part3, get_bert_word_embedding, cosine_similarity):
+        self.get_bert_word_embedding = get_bert_word_embedding
+        self.cosine_similarity = cosine_similarity
+        self.part3 = part3
 
-        # load embeddings
-        self.embeddings = KeyedVectors.load_word2vec_format("data/embeddings/glove50_4k.txt", binary=False)
-        self.entity_data = load_entity_data()
+    def evaluate(self):
 
-    def build_representations(self):
-        entity_2_description = {}
-        uniq_ents = set()
-        for example in self.entity_data:
-            label, ent1, ent2, sent1, sent2 = example
-            ents1, desc = self.extract_named_entities(sent1)
-            entity_2_description[ent1] = desc
-            ents2, desc = self.extract_named_entities(sent2)
-            entity_2_description[ent2] = desc
-            for ent in ents1:              
-                assert type(ent) == spacy.tokens.span.Span, "Extracted entities should be SpaCy Span objects"
-                uniq_ents.add(ent.text)
-            for ent in ents2:
-                assert type(ent) == spacy.tokens.span.Span, "Extracted entities should be SpaCy Span objects"
-                uniq_ents.add(ent.text)
+        # Run the part 3 function
 
-        # check that entities are correct type
-        # Print total number of entities found
-        print("Total entities found: ", len(uniq_ents))
+        print("Part 3: Contextual embeddings with BERT")
+        print("---------------------------------------")
+        print("Polyseme disambiguation: ")
+        word, sentence1, sentence2 = self.part3()
+        print(f"Word: {word}")
+        print(f"Sentence 1: {sentence1}")
+        print(f"Sentence 2: {sentence2}")
+        embedding1 = self.get_bert_word_embedding(sentence1, word)
+        embedding2 = self.get_bert_word_embedding(sentence2, word)
+        similarity = self.cosine_similarity(embedding1, embedding2)
+        
+        return(f"This word is {similarity*100:.2f}% similar in the two sentences.")
+        
 
-        # Compute ent representation for each ent
-        self.entity_2_representation = {k:self.compute_entity_representation(d, self.embeddings) for k,d in entity_2_description.items()}
-        assert list(self.entity_2_representation.values())[0].size == 50, "Each entity's representation should be a 50-dimension vector"
+class Part4_Runner():
+    def __init__(self, search_web, get_bert_sentence_embeddings):
+        self.search_web = search_web
+        self.get_bert_sentence_embeddings = get_bert_sentence_embeddings
 
-        return len(uniq_ents)
+    def evaluate(self):
+        """
+        Run the part 4 function
+        """
+        print("Part 4: Web search simulation with BERT")
+        print("---------------------------------------")
+        test_queries = ["What is the capital of Canada?", 
+                        "What do people speak in Brazil?", 
+                        "Who is Shakespeare?"]
+        
+        for query in test_queries:
+            self.test_web_search(query, 3)
+        return 
+    
+    def test_web_search(self, query, k):
+        """
+        helper function to test the web search function
+        """
+        top_questions, top_answers = self.search_web(query, k)
+        print(f"Top {k} questions similar to '{query}':")
+        for question, answer in zip(top_questions, top_answers):
+            print(f"- Did you mean.... {question}")
+            print(f"    Answer(s):  {answer}")
+        
+        
+        
 
-    def evaluate(self, verbose=False):
-        # Eval benchmark
-        print("Let's see how well we do at the entity similarity benchmark:")
-        binary_acc = []
-        for example in self.entity_data:
-            label, ent1, ent2, sent1, sent2 = example
-            label = float(label)
-            if label > 25 and label < 75:
-                continue
-            label = bool(np.round(label /  100))
-            pred = self.compute_entity_similarity(self.entity_2_representation[ent1],
-                                            self.entity_2_representation[ent2])
-            binary_acc.append(label == pred)
-        print("Accuracy:", np.mean(binary_acc))
-
-
-        # Get top 5 most similar entities for each entity
-        # Print accuracy
-        # if verbose, Print examples
-        print("Now let's see if we can find the top k most similar entities to each entity.")
-        top_k_acc = []
-        for example in self.entity_data:
-            label, ent1, ent2, sent1, sent2 = example
-            label = float(label)
-            if label < 75:
-                continue
-            top_k = self.get_top_k_similar(self.entity_2_representation[ent1],
-                                    {k:v for k,v in self.entity_2_representation.items()
-                                    if k != ent1}, 5)
-            assert len(top_k) == 5
-            top_k_acc.append(ent2 in top_k)
-            if verbose:
-                print("Entity:", ent1)
-                print("Similar entities:", top_k)
-            top_k = self.get_top_k_similar(self.entity_2_representation[ent2],
-                                    {k:v for k,v in self.entity_2_representation.items()
-                                    if k != ent2}, 5)
-            assert len(top_k) == 5
-            top_k_acc.append(ent1 in top_k)
-        print("Top 5 Accuracy:", np.mean(top_k_acc))
-
-        return np.mean(binary_acc), np.mean(top_k_acc)
 
 # Helper functions to load questions
-def load_entity_data():
-    data = []
-    with open("data/WikiSRS_similarity.csv.pro", "r") as f:
-        reader = csv.reader(f, delimiter="\t")
-        for row in reader:
-            data.append(row)
-    return data
+# def load_entity_data():
+#     data = []
+#     with open("data/WikiSRS_similarity.csv.pro", "r") as f:
+#         reader = csv.reader(f, delimiter="\t")
+#         for row in reader:
+#             data.append(row)
+#     return data
 
 def load_synonym_qs(filename):
     '''
@@ -313,40 +195,41 @@ def load_synonym_qs(filename):
             synonym_qs.append((word.strip(), choices, ans.strip()))
     return synonym_qs
 
-def load_analogy_qs(filename):
-    '''
-    input line:
-        a,b,aa,bb   c1,c2,c3,c4
+# def load_analogy_qs(filename):
+#     '''
+#     input line:
+#         a,b,aa,bb   c1,c2,c3,c4
 
-    returns list of tuples, each of the form:
-        (a, b, aa, bb)  // for analogy a:b --> aa:bb
-    '''
-    analogy_qs = []
-    with open(filename) as f:
-        f.readline()    # skip header
-        for line in f:
-            toks, choices_str = line.strip().split('\t')
-            analogy_words = tuple(toks.strip().split(','))          # (a, b, aa, bb)
-            choices = [c.strip() for c in choices_str.split(',')]   # [c1, c2, c3, c4]
-            analogy_qs.append((analogy_words, choices))
-    return analogy_qs
+#     returns list of tuples, each of the form:
+#         (a, b, aa, bb)  // for analogy a:b --> aa:bb
+#     '''
+#     analogy_qs = []
+#     with open(filename) as f:
+#         f.readline()    # skip header
+#         for line in f:
+#             toks, choices_str = line.strip().split('\t')
+#             analogy_words = tuple(toks.strip().split(','))          # (a, b, aa, bb)
+#             choices = [c.strip() for c in choices_str.split(',')]   # [c1, c2, c3, c4]
+#             analogy_qs.append((analogy_words, choices))
+#     return analogy_qs
 
-def load_sentence_sim_qs(filename):
-    '''
-    input line:
-        label   s1  s2
+# def load_sentence_sim_qs(filename):
+#     '''
+#     input line:
+#         label   s1  s2
     
-    returns list of tuples, each of the form:
-        (label, s1, s2)
-    '''
-    samples = []
-    with open(filename) as f:
-        for line in f:
-            line = line.strip()
-            label_str, s1, s2 = line.split('\t')
-            label = int(label_str)
-            samples.append((label, s1.strip(), s2.strip()))
-    return samples
+#     returns list of tuples, each of the form:
+#         (label, s1, s2)
+#     '''
+#     samples = []
+#     with open(filename) as f:
+#         for line in f:
+#             line = line.strip()
+#             label_str, s1, s2 = line.split('\t')
+#             label = int(label_str)
+#             samples.append((label, s1.strip(), s2.strip()))
+#     return samples
+
 
 def load_occupations_list():
     '''
@@ -357,6 +240,11 @@ def load_occupations_list():
         for line in f:
             occupations.append(line.strip())
     return occupations
+
+def load_stanford_web_questions():
+    with open('data/stanford_web_questions.json', 'r') as f:
+        dict = json.load(f)
+    return dict
 
 def main():
     print("Run homework assignment in pa5-quizlet.ipynb")

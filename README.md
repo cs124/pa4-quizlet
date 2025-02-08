@@ -26,6 +26,8 @@ you'll want to:
    
         cd pa5-embeddings
         conda activate cs124
+      
+   - Note: this assignment will have you install a new conda environment that you will use.
    
     You should now see `(cs124)` in front of your shell prompt. 
 
