@@ -1,8 +1,9 @@
 name: cs124_pa5
 channels:
-  - conda-forge
-  - pytorch
   - defaults
+  - pytorch
+  - huggingface
+  - conda-forge
 dependencies:
   - jupyter=1.0.0
   - jupyter_client<7.0.0
