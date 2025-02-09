@@ -5,7 +5,7 @@
 We recommend checking out the following before getting started on PA5:
 
 * The Week 5 videos and slides on Canvas.
-* The J+M readings on Vector Semantics and Embeddings, and Sequence Labeling for Parts of Speech and Named Entities
+* The J+M readings on Vector Semantics and Embeddings
 
 ## Getting the Assignment
 
